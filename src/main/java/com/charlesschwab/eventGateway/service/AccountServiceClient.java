@@ -50,12 +50,12 @@ public class AccountServiceClient {
     // fallback for both circuit breaker and time limiter. return a failed future to signal failure upstream
     private CompletableFuture<Void> accountFallback(String accountId, Throwable ex) {
         log.warn("Account Service validation failed for {}: {}", accountId, ex.toString());
-        return CompletableFuture.failedFuture(new RuntimeException("account-service-unavailable", ex));
+        return CompletableFuture.failedFuture(new com.charlesschwab.eventGateway.exception.AccountServiceUnavailableException("account-service-unavailable", ex));
     }
 
     private CompletableFuture<Void> accountTxFallback(String eventId, String accountId, BigDecimal amount, Throwable ex) {
         log.warn("Account Service transaction failed for {} account {}: {}", eventId, accountId, ex.toString());
-        return CompletableFuture.failedFuture(new RuntimeException("account-service-unavailable", ex));
+        return CompletableFuture.failedFuture(new com.charlesschwab.eventGateway.exception.AccountServiceUnavailableException("account-service-unavailable", ex));
     }
 }
 

@@ -1,17 +1,25 @@
 version: '3.8'
 
 services:
+  # Run the real Account Service JAR (bundled in this repo under src/main/resources)
   account-service:
-    image: python:3.11-slim
+    image: openjdk:17-jdk-slim
     container_name: account-service
+    # mount the pre-built account service jar from the repo into the container
     volumes:
-      - ./stub_account_service.py:/app/stub_account_service.py:ro
+      - ./src/main/resources/accountService-0.0.1-SNAPSHOT.jar:/app/accountService.jar:ro
     working_dir: /app
-    command: ["python", "stub_account_service.py", "--port", "8082"]
+    command: ["sh", "-c", "java -jar /app/accountService.jar"]
     ports:
       - "8082:8082"
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "sh", "-c", "curl -f http://localhost:8082/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
+  # Build and run the Event Gateway from this repository
   event-gateway:
     build:
       context: .
@@ -20,14 +28,18 @@ services:
     ports:
       - "8080:8080"
     environment:
-      # override application property account.service.url -> account-service hostname inside compose
+      # Spring maps ACCOUNT_SERVICE_URL -> account.service.url
       - ACCOUNT_SERVICE_URL=http://account-service:8082
     depends_on:
-      - account-service
+      account-service:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      test: ["CMD", "sh", "-c", "curl -f http://localhost:8080/actuator/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
     restart: unless-stopped
 
+networks:
+  default:
+    driver: bridge
