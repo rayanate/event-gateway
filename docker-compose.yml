@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  account-service:
+    image: python:3.11-slim
+    container_name: account-service
+    volumes:
+      - ./stub_account_service.py:/app/stub_account_service.py:ro
+    working_dir: /app
+    command: ["python", "stub_account_service.py", "--port", "8082"]
+    ports:
+      - "8082:8082"
+    restart: unless-stopped
+
+  event-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: event-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      # override application property account.service.url -> account-service hostname inside compose
+      - ACCOUNT_SERVICE_URL=http://account-service:8082
+    depends_on:
+      - account-service
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
